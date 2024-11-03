@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\TransactionController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
@@ -23,11 +24,18 @@ Route::get("/login", function () {
 Route::post("/login", [LoginController::class, "authenticate"])->middleware(
     "guest"
 );
-Route::post("/logout", [LoginController::class, "logout"])->middleware("auth");
 
 //dashboard routes
-Route::get("/dashboard", function () {
-    return view("dashboard");
-})
-    ->middleware("auth")
-    ->name("dashboard");
+
+Route::middleware("auth")->group(function () {
+    Route::post("/logout", [LoginController::class, "logout"])->name("logout");
+
+    Route::get("/dashboard", function () {
+        return view("dashboard");
+    })->name("dashboard");
+
+    Route::post("/transactions", [
+        TransactionController::class,
+        "transfer",
+    ])->name("tranfer");
+});

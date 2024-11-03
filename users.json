@@ -1,0 +1,51 @@
+{
+    "_id": "343531434343",
+    "name": "Tapas Kumar",
+    "email": "tapash.me@gmail.com",
+    "phone": {
+        "country_code": "+880",
+        "number": "01721439983"
+    },
+    "balance": {
+        "available": 100.0,
+        "currency": "USD"
+    },
+    "rules": [
+        {
+            "name": "Send Email if not logged in for 5 days",
+            "type": "inactivity", // Changed to 'type' for clarity
+            "conditions": {
+                // Added to store multiple conditions if needed
+                "days_inactive": 5
+            },
+            "action": {
+                "type": "email", // 'type' clarifies the action medium
+                "priority": 1 // Numeric for easier sorting (e.g., 1=low, 2=medium, 3=high)
+            }
+        },
+        {
+            "name": "Send SMS if transaction over $100",
+            "type": "transaction_threshold", // Specific type for different rule purposes
+            "conditions": {
+                "min_transaction_amount": 100.0 // Clear and explicit condition
+            },
+            "action": {
+                "type": "sms",
+                "priority": 3
+            }
+        },
+        {
+            "name": "Send email if daily transaction limit exceeds",
+            "type": "transaction_limit",
+            "conditions": {
+                "transaction_count": 5
+            },
+            "action": {
+                "type": "email",
+                "priority": 3
+            }
+        }
+    ],
+    "created_at": "2024-11-02T14:30:00Z", // Timestamps for tracking account creation and updates
+    "updated_at": "2024-11-02T14:30:00Z"
+}
