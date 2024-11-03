@@ -14,12 +14,17 @@ class TransactionController extends Controller
      */
     public function transfer(Request $request)
     {
+        $request->validate([
+            "email" => ["required", "email"],
+            "amt" => ["integer"],
+        ]);
+
         return DB::transaction(function () use ($request) {
             $db = DB::connection("mongodb");
 
             $result = $db->getCollection("users")->updateOne(
                 [
-                    "_id" => Auth()->id(),
+                    "_id" => Auth::id(),
                     "balance.$.available" => ['$gte' => $request->amt],
                 ],
                 [

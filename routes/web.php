@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\RuleDefinationController;
 use App\Http\Controllers\TransactionController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -38,4 +39,10 @@ Route::middleware("auth")->group(function () {
         TransactionController::class,
         "transfer",
     ])->name("tranfer");
+
+    Route::get("/rules", function () {
+        return view("dashboard");
+    });
+
+    Route::post("/rules", [RuleDefinationController::class, "store"]);
 });
