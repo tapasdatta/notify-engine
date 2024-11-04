@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Rule;
+use App\Http\Requests\RuleDefinationRequest;
+use App\Models\Log;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,38 +22,8 @@ class RuleDefinationController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(RuleDefinationRequest $request)
     {
-        $request->validate([
-            "name" => ["required", "string", "max:255"],
-            "type" => [
-                "required",
-                "string",
-                "in:inactivity,transaction_threshold,transaction_limit",
-            ],
-
-            // Conditions based on the rule type
-            "conditions.days_inactive" => [
-                "required_if:type,inactivity",
-                "integer",
-                "min:1",
-            ],
-            "conditions.min_transaction_amount" => [
-                "required_if:type,transaction_threshold",
-                "numeric",
-                "min:1",
-            ],
-            "conditions.transaction_count" => [
-                "required_if:type,transaction_limit",
-                "numeric",
-                "min:2",
-            ],
-
-            // Action fields
-            "action.type" => ["required", "string", "in:email,sms"],
-            "action.priority" => ["required", "string", "min:1", "max:3"],
-        ]);
-
         $userId = Auth::id();
         $ruleType = $request->type;
         $db = DB::connection("mongodb");
@@ -106,14 +77,45 @@ class RuleDefinationController extends Controller
                     ],
                 ]
             );
+
+            Log::create([
+                "user_id" => $userId,
+                "activity_type" => "custom_rule",
+                "custom_rule" => [
+                    "rule_name" => $request->name,
+                    "action_taken" => $request->input("action.type"),
+                    "priority" => $request->input("action.priority"),
+                    "rule_conditions" => $condition,
+                ],
+            ]);
         }, 2);
+
+        return back()->with("success", "Rule created");
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Rule $rule)
+    public function destroy(User $rule, Request $request)
     {
-        //
+        $request->validate([
+            "type" => [
+                "required",
+                "string",
+                "in:inactivity,transaction_threshold,transaction_limit",
+            ],
+        ]);
+
+        $userId = Auth::id();
+        $ruleType = $request->type;
+        $db = DB::connection("mongodb");
+
+        // Remove existing rule of the same type
+        $db->getCollection("users")->updateOne(
+            ["_id" => $userId],
+            ['$pull' => ["rules" => ["type" => $ruleType]]]
+        );
+
+        return back()->with("success", "Rule removed");
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Log;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -26,7 +27,16 @@ class LoginController extends Controller
             //cache last login
             $user->update(["last_login" => now()]);
 
-            //Todo: log login activity
+            Log::create([
+                "user_id" => $user->id,
+                "activity_type" => "login",
+                "login" => [
+                    "transaction" => [
+                        "ip_address" => $request->ip(),
+                        "location" => "Dhaka, BD",
+                    ],
+                ],
+            ]);
 
             return redirect()->intended("dashboard");
         }
@@ -43,7 +53,20 @@ class LoginController extends Controller
      */
     public function logout(Request $request): RedirectResponse
     {
-        Auth::logout();
+        $user = Auth::user();
+
+        Log::create([
+            "user_id" => $user->id,
+            "activity_type" => "logout",
+            "login" => [
+                "transaction" => [
+                    "ip_address" => $request->ip(),
+                    "location" => "Dhaka, BD",
+                ],
+            ],
+        ]);
+
+        $user->logout();
 
         $request->session()->invalidate();
 
