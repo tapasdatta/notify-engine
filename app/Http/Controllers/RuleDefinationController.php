@@ -3,14 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\RuleDefinationRequest;
-use App\Models\Log;
 use App\Models\User;
+use App\Services\LogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class RuleDefinationController extends Controller
 {
+    protected $logService;
+
+    public function __construct(LogService $logService)
+    {
+        $this->logService = $logService;
+    }
+
     /**
      * Show the form for creating a new resource.
      */
@@ -78,16 +85,13 @@ class RuleDefinationController extends Controller
                 ]
             );
 
-            Log::create([
-                "user_id" => $userId,
-                "activity_type" => "custom_rule",
-                "custom_rule" => [
-                    "rule_name" => $request->name,
-                    "action_taken" => $request->input("action.type"),
-                    "priority" => $request->input("action.priority"),
-                    "rule_conditions" => $condition,
-                ],
-            ]);
+            $this->logService->logCustomRule(
+                $userId,
+                $request->name,
+                $request->input("action.type"),
+                $request->input("action.priority"),
+                $condition
+            );
         }, 2);
 
         return back()->with("success", "Rule created");
@@ -115,6 +119,8 @@ class RuleDefinationController extends Controller
             ["_id" => $userId],
             ['$pull' => ["rules" => ["type" => $ruleType]]]
         );
+
+        $this->logService->logCustomRuleDeleted($userId, $ruleType);
 
         return back()->with("success", "Rule removed");
     }

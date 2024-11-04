@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Log;
+use App\Services\LogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -10,6 +10,13 @@ use Illuminate\Validation\ValidationException;
 
 class TransactionController extends Controller
 {
+    protected $logService;
+
+    public function __construct(LogService $logService)
+    {
+        $this->logService = $logService;
+    }
+
     /**
      * Transfer fund.
      */
@@ -53,18 +60,7 @@ class TransactionController extends Controller
                 ]
             );
 
-            Log::create([
-                "user_id" => $userId,
-                "activity_type" => "transaction",
-                "activity_details" => [
-                    "transaction" => [
-                        "transaction_id" => $userId,
-                        "amount" => $amount,
-                        "currency" => "USD",
-                        "transaction_type" => "debit",
-                    ],
-                ],
-            ]);
+            $this->logService->logTransaction($userId, $amount);
         }, 3);
 
         return back()->with("success", "Transfer successful");

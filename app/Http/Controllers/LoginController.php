@@ -2,14 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Log;
 use App\Models\User;
+use App\Services\LogService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 
 class LoginController extends Controller
 {
+    protected $logService;
+
+    public function __construct(LogService $logService)
+    {
+        $this->logService = $logService;
+    }
     /**
      * Handle an authentication attempt.
      */
@@ -27,16 +33,7 @@ class LoginController extends Controller
             //cache last login
             $user->update(["last_login" => now()]);
 
-            Log::create([
-                "user_id" => $user->id,
-                "activity_type" => "login",
-                "login" => [
-                    "transaction" => [
-                        "ip_address" => $request->ip(),
-                        "location" => "Dhaka, BD",
-                    ],
-                ],
-            ]);
+            $this->logService->logLogin($user->id);
 
             return redirect()->intended("dashboard");
         }
@@ -55,16 +52,7 @@ class LoginController extends Controller
     {
         $user = Auth::user();
 
-        Log::create([
-            "user_id" => $user->id,
-            "activity_type" => "logout",
-            "login" => [
-                "transaction" => [
-                    "ip_address" => $request->ip(),
-                    "location" => "Dhaka, BD",
-                ],
-            ],
-        ]);
+        $this->logService->logLogout($user->id);
 
         $user->logout();
 
