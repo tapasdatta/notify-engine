@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\LogService;
+use App\Jobs\ProcessTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -10,13 +10,6 @@ use Illuminate\Validation\ValidationException;
 
 class TransactionController extends Controller
 {
-    protected $logService;
-
-    public function __construct(LogService $logService)
-    {
-        $this->logService = $logService;
-    }
-
     /**
      * Transfer fund.
      */
@@ -59,9 +52,9 @@ class TransactionController extends Controller
                     '$inc' => ["balance.available" => $amount],
                 ]
             );
-
-            $this->logService->logTransaction($userId, $amount);
         }, 3);
+
+        ProcessTransaction::dispatch($userId, $amount);
 
         return back()->with("success", "Transfer successful");
     }
