@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 
@@ -57,7 +58,11 @@ class TransactionService
                 $thresholdRule["conditions"]["min_transaction_amount"]
         ) {
             $actionType = $thresholdRule["action"]["type"] ?? null;
-            $this->triggerNotification($actionType);
+            $this->triggerNotification(
+                $user,
+                $actionType,
+                "transaction_threshold"
+            );
         }
     }
 
@@ -84,7 +89,11 @@ class TransactionService
 
             if ($totalCountLimit && $transactionCount >= $totalCountLimit) {
                 $actionType = $limitRule["action"]["type"] ?? null;
-                $this->triggerNotification($actionType);
+                $this->triggerNotification(
+                    $user,
+                    $actionType,
+                    "transaction_limit"
+                );
             }
         }
     }
@@ -92,10 +101,10 @@ class TransactionService
     /**
      * Trigger notification based on action type.
      */
-    private function triggerNotification($actionType)
+    private function triggerNotification($user, $actionType, $ruleType)
     {
         if ($actionType === "email") {
-            // Send email notification
+            Notification::send();
         } elseif ($actionType === "sms") {
             // Send SMS notification
         }

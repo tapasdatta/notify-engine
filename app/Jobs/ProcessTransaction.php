@@ -2,7 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Services\LogService;
 use App\Servies\TransactionService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -26,13 +25,8 @@ class ProcessTransaction implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(
-        LogService $logService,
-        TransactionService $transactionService
-    ): void {
-        //log the transaction
-        $logService->logTransaction($this->userId, $this->amount);
-
+    public function handle(TransactionService $transactionService): void
+    {
         //evaluate transactional rules
         $transactionService->evaluateRules($this->userId, $this->amount);
     }

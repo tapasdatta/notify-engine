@@ -12,10 +12,12 @@ use Illuminate\Support\Facades\DB;
 class RuleDefinationController extends Controller
 {
     protected $logService;
+    protected $db;
 
     public function __construct(LogService $logService)
     {
         $this->logService = $logService;
+        $this->db = DB::connection("mongodb");
     }
 
     /**
@@ -29,62 +31,21 @@ class RuleDefinationController extends Controller
     /**
      * Store a newly created resource in storage.
      */
+    /**
+     * Store a newly created rule.
+     */
     public function store(RuleDefinationRequest $request)
     {
         $userId = Auth::id();
-        $ruleType = $request->type;
-        $db = DB::connection("mongodb");
 
-        // Map conditions based on the type
-        $condition = match ($ruleType) {
-            "inactivity" => [
-                "days_inactive" => $request->input("conditions.days_inactive"),
-            ],
-            "transaction_threshold" => [
-                "min_transaction_amount" => $request->input(
-                    "conditions.min_transaction_amount"
-                ),
-            ],
-            "transaction_limit" => [
-                "transaction_count" => $request->input(
-                    "conditions.transaction_count"
-                ),
-            ],
-        };
+        $condition = $this->mapConditions(
+            $request->type,
+            $request->input("conditions")
+        );
 
-        DB::transaction(function () use (
-            $db,
-            $userId,
-            $ruleType,
-            $request,
-            $condition
-        ) {
-            // Remove existing rule of the same type
-            $db->getCollection("users")->updateOne(
-                ["_id" => $userId],
-                ['$pull' => ["rules" => ["type" => $ruleType]]]
-            );
-
-            // Add the new or updated rule
-            $db->getCollection("users")->updateOne(
-                ["_id" => $userId],
-                [
-                    '$push' => [
-                        "rules" => [
-                            "name" => $request->name,
-                            "type" => $ruleType,
-                            "conditions" => $condition,
-                            "action" => [
-                                "type" => $request->input("action.type"),
-                                "priority" => $request->input(
-                                    "action.priority"
-                                ),
-                            ],
-                        ],
-                    ],
-                ]
-            );
-
+        DB::transaction(function () use ($userId, $request, $condition) {
+            $this->removeExistingRule($userId, $request->type);
+            $this->addNewRule($userId, $request, $condition);
             $this->logService->logCustomRule(
                 $userId,
                 $request->name,
@@ -98,7 +59,7 @@ class RuleDefinationController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove the specified rule.
      */
     public function destroy(User $rule, Request $request)
     {
@@ -111,17 +72,62 @@ class RuleDefinationController extends Controller
         ]);
 
         $userId = Auth::id();
-        $ruleType = $request->type;
-        $db = DB::connection("mongodb");
-
-        // Remove existing rule of the same type
-        $db->getCollection("users")->updateOne(
-            ["_id" => $userId],
-            ['$pull' => ["rules" => ["type" => $ruleType]]]
-        );
-
-        $this->logService->logCustomRuleDeleted($userId, $ruleType);
+        $this->removeExistingRule($userId, $request->type);
+        $this->logService->logCustomRuleDeleted($userId, $request->type);
 
         return back()->with("success", "Rule removed");
+    }
+
+    /**
+     * Map conditions based on rule type.
+     */
+    private function mapConditions($ruleType, $conditions)
+    {
+        return match ($ruleType) {
+            "inactivity" => ["days_inactive" => $conditions["days_inactive"]],
+            "transaction_threshold" => [
+                "min_transaction_amount" =>
+                    $conditions["min_transaction_amount"],
+            ],
+            "transaction_limit" => [
+                "transaction_count" => $conditions["transaction_count"],
+            ],
+        };
+    }
+
+    /**
+     * Remove existing rule of the same type.
+     */
+    private function removeExistingRule($userId, $ruleType)
+    {
+        $this->db
+            ->getCollection("users")
+            ->updateOne(
+                ["_id" => $userId],
+                ['$pull' => ["rules" => ["type" => $ruleType]]]
+            );
+    }
+
+    /**
+     * Add new rule for the user.
+     */
+    private function addNewRule($userId, $request, $condition)
+    {
+        $this->db->getCollection("users")->updateOne(
+            ["_id" => $userId],
+            [
+                '$push' => [
+                    "rules" => [
+                        "name" => $request->name,
+                        "type" => $request->type,
+                        "conditions" => $condition,
+                        "action" => [
+                            "type" => $request->input("action.type"),
+                            "priority" => $request->input("action.priority"),
+                        ],
+                    ],
+                ],
+            ]
+        );
     }
 }

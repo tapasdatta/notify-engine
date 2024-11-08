@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\ProcessTransaction;
+use App\Services\LogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -10,6 +11,15 @@ use Illuminate\Validation\ValidationException;
 
 class TransactionController extends Controller
 {
+    protected $logService;
+    protected $db;
+
+    public function __construct(LogService $logService)
+    {
+        $this->logService = $logService;
+        $this->db = DB::connection("mongodb");
+    }
+
     /**
      * Transfer fund.
      */
@@ -26,36 +36,48 @@ class TransactionController extends Controller
 
         DB::transaction(function () use ($db, $userId, $amount, $request) {
             // Deduct amount from authenticated user's balance if sufficient
-            $result = $db->getCollection("users")->updateOne(
-                [
-                    "_id" => $userId,
-                    "balance.available" => ['$gte' => $amount],
-                ],
-                [
-                    '$inc' => ["balance.available" => -$amount],
-                ]
-            );
-
-            // Check if the balance update succeeded
-            if ($result->getModifiedCount() === 0) {
-                throw ValidationException::withMessages([
-                    "amt" => "Insufficient funds!",
-                ]);
-            }
-
+            $this->deductBalance($userId, $amount);
             // Add amount to recipient's balance
-            $db->getCollection("users")->updateOne(
-                [
-                    "email" => $request->email,
-                ],
-                [
-                    '$inc' => ["balance.available" => $amount],
-                ]
-            );
-        }, 3);
+            $this->creditBalance($request->email, $amount);
+        });
 
+        //log the transaction
+        $this->logService->logTransaction($userId, $amount);
+        //Run the rules if the user has
         ProcessTransaction::dispatch($userId, $amount);
 
-        return back()->with("success", "Transfer successful");
+        // return back()->with("success", "Transfer successful");
+    }
+
+    //Deduct available balance from sender
+    private function deductBalance($userId, int $amount)
+    {
+        $result = $this->db
+            ->table("users")
+            ->where("id", $userId)
+            ->where("balance.available", ">=", $amount)
+            ->decrement("balance.available", $amount);
+
+        // Check if the balance update succeeded
+        if ($result == 0) {
+            return back()->with("error", "Insufficient funds!");
+        }
+    }
+
+    //Credit balance from sender
+    private function creditBalance($email, int $amount)
+    {
+        $result = $this->db
+            ->table("users")
+            ->where("email", $email)
+            ->where("balance.available", ">=", $amount)
+            ->increment("balance.available", $amount);
+
+        // Check if the balance update succeeded
+        if ($result == 0) {
+            throw ValidationException::withMessages([
+                "amt" => "Insufficient funds!",
+            ]);
+        }
     }
 }

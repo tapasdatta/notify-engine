@@ -6,30 +6,26 @@ use App\Http\Controllers\TransactionController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
-Route::get("/", function () {
-    return view("welcome");
-});
-
 Route::get("/users", function () {
     $users = User::all("name", "email");
     return $users;
-});
+})->name("users");
 
 //auth routes
-Route::get("/login", function () {
+Route::get("/", function () {
     return view("login");
 })
     ->middleware("guest")
     ->name("login");
 
-Route::post("/login", [LoginController::class, "authenticate"])->middleware(
-    "guest"
-);
+Route::post("/login", [LoginController::class, "authenticate"])
+    ->middleware("guest")
+    ->name("postLogin");
 
 //dashboard routes
 
 Route::middleware("auth")->group(function () {
-    Route::post("/logout", [LoginController::class, "logout"])->name("logout");
+    Route::get("/logout", [LoginController::class, "logout"])->name("logout");
 
     Route::get("/dashboard", function () {
         return view("dashboard");

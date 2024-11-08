@@ -16,33 +16,32 @@ class LoginController extends Controller
     {
         $this->logService = $logService;
     }
+
     /**
      * Handle an authentication attempt.
      */
-    public function authenticate(Request $request): RedirectResponse
+    public function authenticate(Request $request)
     {
         $credentials = $request->validate([
             "email" => ["required", "email"],
         ]);
 
-        $user = User::where("email", $credentials)->firstOrFail();
+        $user = User::where("email", $request->input("email"))->firstOrFail();
 
-        if (Auth::login($user)) {
-            $request->session()->regenerate();
-
-            //cache last login
-            $user->update(["last_login" => now()]);
-
-            $this->logService->logLogin($user->id);
-
-            return redirect()->intended("dashboard");
+        if (!Auth::loginUsingId($user->id)) {
+            return back()
+                ->withErrors([
+                    "email" =>
+                        "The provided credentials do not match our records.",
+                ])
+                ->onlyInput("email");
         }
 
-        return back()
-            ->withErrors([
-                "email" => "The provided credentials do not match our records.",
-            ])
-            ->onlyInput("email");
+        $request->session()->regenerate();
+        $this->cacheLastLogin($user);
+        $this->logService->logLogin($user->id);
+
+        return redirect()->intended("dashboard");
     }
 
     /**
@@ -50,14 +49,25 @@ class LoginController extends Controller
      */
     public function logout(Request $request): RedirectResponse
     {
-        $user = Auth::user();
+        $userId = Auth::id();
 
-        $this->logService->logLogout($user->id);
+        $this->logService->logLogout($userId);
 
-        $user->logout();
+        Auth::logout();
 
         $request->session()->invalidate();
 
-        return redirect("/");
+        $request->session()->regenerateToken();
+
+        return redirect()->route("login");
+    }
+
+    /**
+     * Cache the user's last login time.
+     */
+    private function cacheLastLogin(User $user)
+    {
+        $user->last_login = now();
+        $user->save();
     }
 }
