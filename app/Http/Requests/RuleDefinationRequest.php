@@ -11,7 +11,7 @@ class RuleDefinationRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -48,7 +48,7 @@ class RuleDefinationRequest extends FormRequest
 
             // Action fields
             "action.type" => ["required", "string", "in:email,sms"],
-            "action.priority" => ["required", "string", "min:1", "max:3"],
+            "action.priority" => ["required", "string", "in:high,low"],
         ];
     }
 }

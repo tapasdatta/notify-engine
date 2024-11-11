@@ -4,6 +4,7 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\RuleDefinationController;
 use App\Http\Controllers\TransactionController;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get("/users", function () {
@@ -36,9 +37,15 @@ Route::middleware("auth")->group(function () {
         "transfer",
     ])->name("tranfer");
 
-    Route::get("/rules", function () {
-        return view("dashboard");
-    });
+    Route::get("/rules", [RuleDefinationController::class, "create"])->name(
+        "rules"
+    );
 
-    Route::post("/rules", [RuleDefinationController::class, "store"]);
+    Route::post("/rules", [RuleDefinationController::class, "store"])->name(
+        "rule.store"
+    );
+
+    Route::delete("/rules", [RuleDefinationController::class, "destroy"])->name(
+        "rule.destroy"
+    );
 });

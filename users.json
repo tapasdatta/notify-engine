@@ -13,14 +13,13 @@
     "rules": [
         {
             "name": "Send Email if not logged in for 5 days",
-            "type": "inactivity", // Changed to 'type' for clarity
+            "type": "inactivity",
             "conditions": {
-                // Added to store multiple conditions if needed
                 "days_inactive": 5
             },
             "action": {
-                "type": "email", // 'type' clarifies the action medium
-                "priority": 1 // Numeric for easier sorting (e.g., 1=low, 2=medium, 3=high)
+                "type": "email",
+                "priority": 1
             }
         },
         {

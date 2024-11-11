@@ -48,6 +48,11 @@ class LogService
         $this->logActivity($userId, "logout");
     }
 
+    public function logCustomRuleDeleted($userId, $ruleType)
+    {
+        $this->logActivity($userId, $ruleType);
+    }
+
     public function logTransaction(
         $userId,
         $amount,

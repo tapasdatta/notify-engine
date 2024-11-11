@@ -31,7 +31,7 @@ class UserFactory extends Factory
                 "number" => fake()->phoneNumber(),
             ],
             "balance" => [
-                "avaliable" => fake()->randomFloat(null, 1000.0),
+                "available" => fake()->randomFloat(null, 1000.0),
                 "currency" => "USD",
             ],
             "rules" => [

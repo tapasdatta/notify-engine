@@ -25,7 +25,9 @@ class RuleDefinationController extends Controller
      */
     public function create()
     {
-        //
+        $rules = Auth::user()->rules;
+
+        return view("rules")->with("rules", $rules);
     }
 
     /**
@@ -45,7 +47,9 @@ class RuleDefinationController extends Controller
 
         DB::transaction(function () use ($userId, $request, $condition) {
             $this->removeExistingRule($userId, $request->type);
-            $this->addNewRule($userId, $request, $condition);
+
+            $result = $this->addNewRule($userId, $request, $condition);
+
             $this->logService->logCustomRule(
                 $userId,
                 $request->name,
@@ -53,7 +57,7 @@ class RuleDefinationController extends Controller
                 $request->input("action.priority"),
                 $condition
             );
-        }, 2);
+        });
 
         return back()->with("success", "Rule created");
     }
@@ -100,12 +104,12 @@ class RuleDefinationController extends Controller
      */
     private function removeExistingRule($userId, $ruleType)
     {
-        $this->db
-            ->getCollection("users")
-            ->updateOne(
-                ["_id" => $userId],
-                ['$pull' => ["rules" => ["type" => $ruleType]]]
-            );
+        $result = $this->db
+            ->table("users")
+            ->where("id", $userId)
+            ->update(['$pull' => ["rules" => ["type" => "inactivity"]]]);
+
+        return $result;
     }
 
     /**
@@ -113,9 +117,10 @@ class RuleDefinationController extends Controller
      */
     private function addNewRule($userId, $request, $condition)
     {
-        $this->db->getCollection("users")->updateOne(
-            ["_id" => $userId],
-            [
+        $result = $this->db
+            ->table("users")
+            ->where("id", $userId)
+            ->update([
                 '$push' => [
                     "rules" => [
                         "name" => $request->name,
@@ -127,7 +132,8 @@ class RuleDefinationController extends Controller
                         ],
                     ],
                 ],
-            ]
-        );
+            ]);
+
+        return $result;
     }
 }

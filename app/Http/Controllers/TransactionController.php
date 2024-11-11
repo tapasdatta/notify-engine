@@ -7,7 +7,6 @@ use App\Services\LogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class TransactionController extends Controller
 {
@@ -36,17 +35,27 @@ class TransactionController extends Controller
 
         DB::transaction(function () use ($db, $userId, $amount, $request) {
             // Deduct amount from authenticated user's balance if sufficient
-            $this->deductBalance($userId, $amount);
+            $debit = $this->deductBalance($userId, $amount);
+
+            if ($debit == 0) {
+                return back()->with("error", "Insufficient fund!");
+            }
+
             // Add amount to recipient's balance
-            $this->creditBalance($request->email, $amount);
+            $credit = $this->creditBalance($request->email, $amount);
+
+            if ($credit == 0) {
+                return back()->with("error", "Fund transfer failed!");
+            }
         });
 
         //log the transaction
         $this->logService->logTransaction($userId, $amount);
+
         //Run the rules if the user has
         ProcessTransaction::dispatch($userId, $amount);
 
-        // return back()->with("success", "Transfer successful");
+        return back()->with("success", "Transfer successful");
     }
 
     //Deduct available balance from sender
@@ -58,10 +67,7 @@ class TransactionController extends Controller
             ->where("balance.available", ">=", $amount)
             ->decrement("balance.available", $amount);
 
-        // Check if the balance update succeeded
-        if ($result == 0) {
-            return back()->with("error", "Insufficient funds!");
-        }
+        return $result;
     }
 
     //Credit balance from sender
@@ -73,11 +79,6 @@ class TransactionController extends Controller
             ->where("balance.available", ">=", $amount)
             ->increment("balance.available", $amount);
 
-        // Check if the balance update succeeded
-        if ($result == 0) {
-            throw ValidationException::withMessages([
-                "amt" => "Insufficient funds!",
-            ]);
-        }
+        return $result;
     }
 }

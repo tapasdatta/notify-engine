@@ -13,10 +13,9 @@
           <nav class="mx-auto flex max-w-7xl items-center justify-between gap-x-6 p-6 lg:px-8" aria-label="Global">
             <div class="hidden lg:flex lg:gap-x-12">
                 @auth
-                    <a href="#" class="text-sm/6 font-semibold text-gray-900">Product</a>
-                    <a href="#" class="text-sm/6 font-semibold text-gray-900">Features</a>
-                    <a href="#" class="text-sm/6 font-semibold text-gray-900">Marketplace</a>
-                    <a href="#" class="text-sm/6 font-semibold text-gray-900">Company</a>
+                    <a href="{{route('dashboard')}}" class="text-sm/6 font-semibold text-gray-900">Dashboard</a>
+                    <a href="{{route('users')}}" class="text-sm/6 font-semibold text-gray-900">Users</a>
+                    <a href="{{route('rules')}}" class="text-sm/6 font-semibold text-gray-900">Rules</a>
                 @endauth
             </div>
             <div class="flex flex-1 items-center justify-end gap-x-6">
